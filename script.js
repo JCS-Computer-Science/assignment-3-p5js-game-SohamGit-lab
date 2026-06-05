@@ -4,7 +4,8 @@ let score = 0;
 let gameOver = false;
 let img;
 let img2;
-
+let showHitbox = false;
+let highScore = 0;
 
 // Load the image.
 function preload() {
@@ -36,12 +37,21 @@ function draw() {
 
 
     if (!gameOver) {
+
+        if (score > highScore) {
+            highScore = score;
+        }
+        text("Score: " + score, 200, 40);
+        text("Best: " + highScore, 200, 90);
+        textSize(40);
+
         // Bird
         bird.update();
         bird.show();
 
+
         // Pipes
-        if (frameCount % 300 === 0) {
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < width - 700) {
             pipes.push(new Pipe());
         }
 
@@ -66,9 +76,7 @@ function draw() {
             }
         }
 
-        fill(500);
-        textSize(50)
-        text("Score " + score, 200, 40);
+
     }
 
     else {
@@ -84,15 +92,21 @@ function draw() {
 }
 //Jump Mechanism 
 function mousePressed() {
+
     if (!gameOver) {
         bird.jump();
-    } else {
-        // Restart
+    }
+    else {
+
         pipes = [];
         pipes.push(new Pipe());
+
         score = 0;
+
+        bird.y = height / 2;
+        bird.velocity = 0;
+
         gameOver = false;
-        bird = new Bird();
     }
 }
 
@@ -101,14 +115,40 @@ class Bird {
     constructor() {
         this.y = height / 2;
         this.x = 300;
-        this.gravity = 0.230;
-        this.lift = -5;
+        this.w = 300
+        this.h = 50
+        this.gravity = 0.45;
+        this.lift = -9;
         this.velocity = 5;
     }
 
     show() {
-        // Draw the image 50x50.
-        image(img, this.x, this.y, 400, 380);
+        // Roatation of Dragon mechanics
+        push();
+
+        translate(this.x, this.y);
+
+        rotate(map(this.velocity,
+            -10, 10,
+            -PI / 12, PI / 12));
+
+        image(img, 0, 0, 400, 380);
+
+        pop();
+
+        if (showHitbox) {
+            noFill();
+            stroke(255, 0, 0);
+            strokeWeight(3);
+
+            rectMode(CENTER);
+            rect(this.x, this.y, this.w, this.h);
+
+            rectMode(CORNER);
+            noStroke();
+
+        }
+
     }
 
     update() {
@@ -129,26 +169,68 @@ class Bird {
         this.velocity += this.lift;
     }
 
+
+
+}
+
+function keyPressed() {
+
+    if (key === 'H' || key === 'h') {
+        showHitbox = !showHitbox;
+    }
+
 }
 
 class Pipe {
     constructor() {
-        this.spacing = random(120, 180);
-        this.top = random(height / 6, 3 / 4 * height);
+        this.spacing = 375;
+        this.top = random(
+            150,
+            height - this.spacing - 150
+        );
         this.bottom = height - (this.top + this.spacing);
         this.x = width;
-        this.w = 60;
-        this.speed = 3;
+        this.w = 80;
+        this.speed = 3 + score * 0.8;
         this.passed = false;
-
     }
     show() {
-        fill(255, 0, 0);
+
+
+        // Top pipe
+        fill(0, 180, 0);
         rect(this.x, 0, this.w, this.top);
-        rect(this.x, height - this.bottom, this.w, this.bottom)
-        // Draw the image 50x50.
 
+        fill(0, 255, 0);
+        rect(this.x - 10, this.top - 20, this.w + 20, 20);
 
+        // Bottom pipe
+        fill(0, 180, 0);
+        rect(
+            this.x,
+            height - this.bottom,
+            this.w,
+            this.bottom
+        );
+
+        fill(0, 255, 0);
+        rect(
+            this.x - 10,
+            height - this.bottom,
+            this.w + 20,
+            20
+        );
+
+        rect(this.x - 5, this.top - 20, this.w + 10, 20);
+        if (showHitbox) {
+            stroke(0, 255, 0);
+            noFill();
+
+            rect(this.x, 0, this.w, this.top);
+            rect(this.x, height - this.bottom, this.w, this.bottom);
+
+            noStroke();
+        }
     }
 
     update() {
@@ -160,11 +242,25 @@ class Pipe {
     }
 
     hits(bird) {
-        if (bird.y < this.top || bird.y > height - this.bottom) {
-            if (bird.x > this.x && bird.x < this.x + this.w) {
+
+        let birdLeft = bird.x - bird.w / 2;
+        let birdRight = bird.x + bird.w / 2;
+        let birdTop = bird.y - bird.h / 2;
+        let birdBottom = bird.y + bird.h / 2;
+
+        if (
+            birdRight > this.x &&
+            birdLeft < this.x + this.w
+        ) {
+
+            if (
+                birdTop < this.top ||
+                birdBottom > height - this.bottom
+            ) {
                 return true;
             }
         }
+
         return false;
     }
 }
